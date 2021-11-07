@@ -19,7 +19,7 @@ module.exports = {
     ecmaVersion: 12,
     sourceType: "module",
   },
-  plugins: ["react"],
+  plugins: ["import", "react"],
   rules: {
     "import/order": [
       "error",
