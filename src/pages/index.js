@@ -1,8 +1,9 @@
 import Head from "next/head";
-import Chessground from "react-chessground";
 import "react-chessground/dist/styles/chessground.css";
+import { Container, Navbar, Stack } from "react-bootstrap";
+import Main from "../components/Main";
 
-export default function Home() {
+const Index = () => {
   return (
     <>
       <Head>
@@ -14,7 +15,16 @@ export default function Home() {
         />
         <title>Opening Trainer</title>
       </Head>
-      <Chessground />
+      <Stack gap={3}>
+        <Navbar bg="light">
+          <Container>
+            <Navbar.Brand>Opening Trainer</Navbar.Brand>
+          </Container>
+        </Navbar>
+        <Main />
+      </Stack>
     </>
   );
-}
+};
+
+export default Index;
