@@ -13,9 +13,12 @@ export const getCloudEval = async (fen) => {
       "https://lichess.org/api/cloud-eval?" +
         new URLSearchParams({ fen: newFen })
     );
+    if (apiResult.status >= 404) {
+      return null;
+    }
   }
   const apiJson = (await apiResult.json()).pvs[0];
-  return apiJson.mate === undefined ? apiJson.cp / 100 : apiJson.mate * 1000;
+  return apiJson.mate === undefined ? apiJson.cp / 100 : `M${apiJson.mate}`;
 };
 
 export const getRandomOpeningMove = async (fen, config) => {
@@ -44,4 +47,6 @@ export const getRandomOpeningMove = async (fen, config) => {
       return { san, moveCount, probability: moveCount / totalMoves };
     }
   }
+
+  return null;
 };

@@ -37,16 +37,19 @@ const Main = () => {
     "2200",
     "2500",
   ]);
-  const [totalGamesThreshold, setTotalGamesThreshold] = useState("100");
+  const [totalGamesThreshold, setTotalGamesThreshold] = useState(100);
   const [started, setStarted] = useState(false);
   const [message, setMessage] = useState(
     "Make moves on the chessboard to set starting position."
   );
   const [fen, setFen] = useState("");
+  const [initialFen, setInitialFen] = useState("");
   const [lastMove, setLastMove] = useState();
+  const [done, setDone] = useState(false);
 
   const Chess = typeof ChessJS === "function" ? ChessJS : ChessJS.Chess;
-  const chess = useRef(Chess()).current;
+  const chessRef = useRef(Chess());
+  const chess = chessRef.current;
 
   const makeComputerMove = useCallback(async () => {
     if (chess.turn() === (isWhite ? "w" : "b")) {
@@ -55,22 +58,34 @@ const Main = () => {
     }
 
     setMessage("Loading...");
-    const [cloudEval, { san, moveCount, probability }] = await Promise.all([
+    const [cloudEval, randomOpeningMove] = await Promise.all([
       getCloudEval(chess.fen()),
       getRandomOpeningMove(chess.fen(), {
         "speeds[]": selectedDatabaseSpeeds,
         "ratings[]": selectedDatabaseRatings,
       }),
     ]);
+    if (randomOpeningMove === null) {
+      setMessage(`Eval: ${cloudEval}; this is a novelty`);
+      setDone(true);
+      return;
+    }
+    const { san, moveCount, probability } = randomOpeningMove;
 
     const { from, to } = chess.move(san);
     setFen(chess.fen());
     setLastMove([from, to]);
-    setMessage(
-      `Eval: ${cloudEval}; made move ${san} (${moveCount} positions, probability ${(
-        probability * 100
-      ).toFixed(2)}%)`
-    );
+
+    const message = `Eval: ${cloudEval}; made move ${san} (${moveCount} positions, probability ${(
+      probability * 100
+    ).toFixed(2)}%).`;
+
+    if (moveCount < 100) {
+      setDone(true);
+      setMessage(`${message} Training is over.`);
+    } else {
+      setMessage(message);
+    }
   }, [selectedDatabaseRatings, selectedDatabaseSpeeds, chess, isWhite]);
 
   useEffect(() => {
@@ -87,21 +102,40 @@ const Main = () => {
     makeComputerMove,
   ]);
 
+  const dests = new Map();
+  if (started) {
+    for (const sq of chess.SQUARES) {
+      const moves = chess.moves({ square: sq, verbose: true });
+      if (moves.length > 0) {
+        dests.set(
+          sq,
+          moves.map(({ to }) => to)
+        );
+      }
+    }
+  }
+
   return (
     <Container>
       <Row>
         <Col>
           <Chessground
             fen={fen}
+            viewOnly={done}
+            orientation={isWhite ? "white" : "black"}
             lastMove={lastMove}
+            highlight={{ lastMove: started, check: started }}
+            movable={{ free: !started, dests }}
             onMove={(from, to) => {
               if (!started) {
-                return;
+                chess.put(chess.get(from), to);
+                chess.remove(from);
+                setFen(chess.fen());
+              } else {
+                chess.move({ from, to });
+                setFen(chess.fen());
+                makeComputerMove();
               }
-
-              chess.move({ from, to });
-              setFen(chess.fen());
-              makeComputerMove();
             }}
           />
         </Col>
@@ -186,9 +220,9 @@ const Main = () => {
                 <Form.Group>
                   <FormHeaderLabel>Total Games Threshold</FormHeaderLabel>
                   <Form.Control
-                    value={totalGamesThreshold}
+                    value={totalGamesThreshold.toString()}
                     onChange={({ target: { value } }) =>
-                      setTotalGamesThreshold(value)
+                      setTotalGamesThreshold(Number(value))
                     }
                     disabled={started}
                   />
@@ -197,10 +231,37 @@ const Main = () => {
                   variant="primary"
                   className="mt-3"
                   onClick={() => {
+                    if (!isWhite) {
+                      const splitFen = fen.split(" ");
+                      const newFen = splitFen
+                        .slice(0, 1)
+                        .concat("b")
+                        .concat(splitFen.slice(2))
+                        .join(" ");
+                      chessRef.current = Chess(newFen);
+                      setFen(newFen);
+                      setInitialFen(newFen);
+                    } else {
+                      setInitialFen(fen);
+                    }
+
                     setStarted(true);
                   }}
+                  disabled={started}
                 >
                   Start
+                </Button>
+                <Button
+                  variant="secondary"
+                  className="mt-3"
+                  onClick={() => {
+                    setFen(initialFen);
+                    chessRef.current = Chess(initialFen);
+                    makeComputerMove();
+                  }}
+                  disabled={!started}
+                >
+                  Reset
                 </Button>
               </Form>
             </Card.Body>
