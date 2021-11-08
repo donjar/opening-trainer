@@ -1,6 +1,14 @@
 import * as ChessJS from "chess.js";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Button, Card, Col, Container, Form, Row } from "react-bootstrap";
+import {
+  Button,
+  ButtonGroup,
+  Card,
+  Col,
+  Container,
+  Form,
+  Row,
+} from "react-bootstrap";
 import Chessground from "react-chessground";
 import styled from "styled-components";
 import { getCloudEval, getRandomOpeningMove } from "../utils";
@@ -22,6 +30,7 @@ const FormHeaderLabel = styled(Form.Label)`
 
 const Main = () => {
   const [isWhite, setIsWhite] = useState(true);
+  const [startingColorIsWhite, setStartingColorIsWhite] = useState(true);
   const [selectedDatabaseSpeeds, setSelectedDatabaseSpeeds] = useState([
     "ultraBullet",
     "bullet",
@@ -61,8 +70,8 @@ const Main = () => {
     const [cloudEval, randomOpeningMove] = await Promise.all([
       getCloudEval(chess.fen()),
       getRandomOpeningMove(chess.fen(), {
-        "speeds[]": selectedDatabaseSpeeds,
-        "ratings[]": selectedDatabaseRatings,
+        speeds: selectedDatabaseSpeeds,
+        ratings: selectedDatabaseRatings,
       }),
     ]);
     if (randomOpeningMove === null) {
@@ -82,7 +91,7 @@ const Main = () => {
 
     if (moveCount < 100) {
       setDone(true);
-      setMessage(`${message} Training is over.`);
+      setMessage(`${message} Training is over. PGN: ${chess.pgn()}`);
     } else {
       setMessage(message);
     }
@@ -170,6 +179,31 @@ const Main = () => {
                   </div>
                 </Form.Group>
                 <Form.Group>
+                  <FormHeaderLabel>Starting Color</FormHeaderLabel>
+                  <div>
+                    <Form.Check
+                      inline
+                      type="radio"
+                      id="radio-starting-color-white"
+                      name="radio-group-starting-color"
+                      label="White"
+                      checked={startingColorIsWhite}
+                      onChange={() => setStartingColorIsWhite(true)}
+                      disabled={started}
+                    />
+                    <Form.Check
+                      inline
+                      type="radio"
+                      id="radio-starting-color-black"
+                      name="radio-group-starting-color"
+                      label="Black"
+                      checked={!startingColorIsWhite}
+                      onChange={() => setStartingColorIsWhite(false)}
+                      disabled={started}
+                    />
+                  </div>
+                </Form.Group>
+                <Form.Group>
                   <FormHeaderLabel>Database speeds</FormHeaderLabel>
                   <div>
                     {Object.entries(DATABASE_SPEEDS).map(
@@ -227,42 +261,47 @@ const Main = () => {
                     disabled={started}
                   />
                 </Form.Group>
-                <Button
-                  variant="primary"
-                  className="mt-3"
-                  onClick={() => {
-                    if (!isWhite) {
-                      const splitFen = fen.split(" ");
-                      const newFen = splitFen
-                        .slice(0, 1)
-                        .concat("b")
-                        .concat(splitFen.slice(2))
-                        .join(" ");
-                      chessRef.current = Chess(newFen);
-                      setFen(newFen);
-                      setInitialFen(newFen);
-                    } else {
-                      setInitialFen(fen);
-                    }
+                <ButtonGroup>
+                  {!started && (
+                    <Button
+                      variant="primary"
+                      className="mt-3"
+                      onClick={() => {
+                        if (!startingColorIsWhite) {
+                          const splitFen = fen.split(" ");
+                          const newFen = splitFen
+                            .slice(0, 1)
+                            .concat("b")
+                            .concat(splitFen.slice(2))
+                            .join(" ");
+                          chessRef.current = Chess(newFen);
+                          setFen(newFen);
+                          setInitialFen(newFen);
+                        } else {
+                          setInitialFen(fen);
+                        }
 
-                    setStarted(true);
-                  }}
-                  disabled={started}
-                >
-                  Start
-                </Button>
-                <Button
-                  variant="secondary"
-                  className="mt-3"
-                  onClick={() => {
-                    setFen(initialFen);
-                    chessRef.current = Chess(initialFen);
-                    makeComputerMove();
-                  }}
-                  disabled={!started}
-                >
-                  Reset
-                </Button>
+                        setStarted(true);
+                      }}
+                    >
+                      Start
+                    </Button>
+                  )}
+                  {started && (
+                    <Button
+                      variant="secondary"
+                      className="mt-3"
+                      onClick={() => {
+                        setFen(initialFen);
+                        chessRef.current = Chess(initialFen);
+                        makeComputerMove();
+                        setDone(false);
+                      }}
+                    >
+                      Reset
+                    </Button>
+                  )}
+                </ButtonGroup>
               </Form>
             </Card.Body>
           </Card>
