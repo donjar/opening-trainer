@@ -89,7 +89,7 @@ const Main = () => {
       probability * 100
     ).toFixed(2)}%).`;
 
-    if (moveCount < 100) {
+    if (moveCount < totalGamesThreshold) {
       setDone(true);
       setMessage(`${message} Training is over. PGN: ${chess.pgn()}`);
     } else {
