@@ -9,7 +9,7 @@ import {
   Form,
   Row,
 } from "react-bootstrap";
-import Chessground from "react-chessground";
+import { Chessboard } from "react-chessboard";
 import styled from "styled-components";
 import { getCloudEval, getRandomOpeningMove } from "../utils";
 
@@ -51,9 +51,12 @@ const Main = () => {
   const [message, setMessage] = useState(
     "Make moves on the chessboard to set starting position."
   );
-  const [fen, setFen] = useState("");
-  const [initialFen, setInitialFen] = useState("");
-  const [lastMove, setLastMove] = useState();
+  const [fen, setFen] = useState(
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+  );
+  const [initialFen, setInitialFen] = useState(
+    "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"
+  );
   const [done, setDone] = useState(false);
 
   const Chess = typeof ChessJS === "function" ? ChessJS : ChessJS.Chess;
@@ -81,9 +84,8 @@ const Main = () => {
     }
     const { san, moveCount, probability } = randomOpeningMove;
 
-    const { from, to } = chess.move(san);
+    chess.move(san);
     setFen(chess.fen());
-    setLastMove([from, to]);
 
     const message = `Eval: ${cloudEval}; made move ${san} (${moveCount} positions, probability ${(
       probability * 100
@@ -95,7 +97,13 @@ const Main = () => {
     } else {
       setMessage(message);
     }
-  }, [selectedDatabaseRatings, selectedDatabaseSpeeds, chess, isWhite]);
+  }, [
+    selectedDatabaseRatings,
+    selectedDatabaseSpeeds,
+    chess,
+    isWhite,
+    totalGamesThreshold,
+  ]);
 
   useEffect(() => {
     (async () => {
@@ -128,14 +136,11 @@ const Main = () => {
     <Container>
       <Row>
         <Col>
-          <Chessground
-            fen={fen}
-            viewOnly={done}
-            orientation={isWhite ? "white" : "black"}
-            lastMove={lastMove}
-            highlight={{ lastMove: started, check: started }}
-            movable={{ free: !started, dests }}
-            onMove={(from, to) => {
+          <Chessboard
+            position={fen}
+            arePiecesDraggable={!done}
+            boardOrientation={isWhite ? "white" : "black"}
+            onPieceDrop={(from, to) => {
               if (!started) {
                 chess.put(chess.get(from), to);
                 chess.remove(from);

@@ -1,5 +1,4 @@
 import Head from "next/head";
-import "react-chessground/dist/styles/chessground.css";
 import { Container, Navbar, Stack } from "react-bootstrap";
 import Main from "../components/Main";
 
